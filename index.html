@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Meu Sistema 🧑‍💻</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // ==========================================
+        // CONFIGURAÇÃO DE VENCIMENTO DO SISTEMA
+        // ==========================================
+        // IMPORTANTE: Meses no JavaScript começam em 0 (Jan=0, Fev=1, Mar=2, Abr=3...)
+        const dataExpiracao = new Date(2026, 3, 15); // Expira em: 15 de Abril de 2026
+        const dataHoje = new Date();
+
+        if (dataHoje >= dataExpiracao) {
+            window.onload = function() {
+                document.body.innerHTML = `
+                    <div style="background:#000; color:#fff; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-family:'Outfit', sans-serif; padding:20px;">
+                        <span style="font-size:5rem;">⚠️</span>
+                        <h1 style="color:#D4AF37; margin-top:20px;">SISTEMA BLOQUEADO</h1>
+                        <p style="color:#8E8E93; max-width:300px; margin-top:10px;">O prazo de licenciamento mensal expirou. Entre em contato com o suporte para renovar sua licença.</p>
+                        <a href="https://wa.me/7967076806" style="margin-top:30px; background:#D4AF37; color:#000; padding:15px 30px; border-radius:12px; text-decoration:none; font-weight:bold; text-transform:uppercase;">Falar com Suporte</a>
+                    </div>`;
+            };
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-app: #0A0A0B; --bg-surface: #141416; --bg-elevated: #1D1D20; --border: #2A2A2E;
+            --text-title: #FFFFFF; --text-base: #D1D1D6; --text-muted: #8E8E93;
+            --gold: #D4AF37; --gold-dark: #997A15; 
+            --success: #30D158; --danger: #FF453A; --warning: #FF9F0A; --info: #0A84FF;
+            --zap: #BF5AF2; --wa: #25D366;
+            --radius-md: 12px; --radius-lg: 20px; --radius-full: 9999px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Inter', sans-serif; background-color: #000; display: flex; justify-content: center; height: 100vh; overflow: hidden; color: var(--text-base); }
+        .font-top { font-family: 'Outfit', sans-serif; }
+
+        #app { width: 100%; max-width: 430px; background-color: var(--bg-app); position: relative; display: flex; flex-direction: column; overflow: hidden; display: none; }
+
+        /* --- LOGIN --- */
+        #login-screen { width: 100%; max-width: 430px; background: var(--bg-app); height: 100%; position: absolute; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .login-logo { font-size: 4rem; margin-bottom: 10px; filter: drop-shadow(0 10px 20px rgba(212, 175, 55, 0.2)); }
+        .password-dots { display: flex; gap: 15px; margin-bottom: 40px; }
+        .dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--text-muted); transition: 0.3s; }
+        .dot.filled { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 15px var(--gold); }
+        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; max-width: 280px; }
+        .numpad-btn { width: 75px; height: 75px; border-radius: 50%; background: var(--bg-surface); border: 1px solid var(--border); color: white; font-size: 1.8rem; font-family: 'Outfit', sans-serif; display: flex; align-items: center; justify-content: center; margin: 0 auto; cursor: pointer; transition: 0.1s; }
+        .numpad-btn:active { background: var(--border); transform: scale(0.9); }
+
+        /* --- TOASTS E NOTIFICAÇÕES --- */
+        #toast-container { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: column; gap: 10px; width: 90%; pointer-events: none; }
+        .toast { background: var(--bg-elevated); border: 1px solid var(--border); border-left: 4px solid var(--gold); color: white; padding: 14px 20px; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-size: 0.9rem; font-weight: 500; animation: slideDown 0.4s forwards; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- HEADER & SININHO --- */
+        .top-bar { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: var(--bg-app); z-index: 10; }
+        .actions-header { display: flex; gap: 15px; align-items: center; }
+        .bell-btn { position: relative; font-size: 1.5rem; color: white; cursor: pointer; }
+        .bell-badge { position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; font-size: 0.6rem; font-weight: bold; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .lock-btn { color: var(--danger); font-size: 1.5rem; cursor: pointer; }
+
+        /* --- CONTEÚDO --- */
+        .content { flex: 1; overflow-y: auto; padding: 15px 20px 130px; display: flex; flex-direction: column; gap: 20px; }
+        .content::-webkit-scrollbar { display: none; }
+        .view { display: none; animation: fadeIn 0.3s ease; }
+        .view.active { display: flex; flex-direction: column; gap: 15px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* --- PILARES --- */
+        .capital-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .capital-card { background: var(--bg-surface); border: 1px solid var(--border); padding: 15px; border-radius: var(--radius-md); position: relative; overflow: hidden; }
+        .capital-card::before { content: ''; position: absolute; top: -20px; right: -20px; width: 60px; height: 60px; filter: blur(30px); border-radius: 50%; opacity: 0.2;}
+        .card-total::before { background: var(--gold); } .card-caixa::before { background: var(--success); } .card-rua::before { background: var(--info); } .card-lucro::before { background: var(--zap); }
+        .cap-title { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; }
+        .cap-value { font-size: 1.35rem; color: white; }
+
+        /* --- LISTAS --- */
+        .list-item { background: var(--bg-surface); border: 1px solid var(--border); padding: 15px; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .btn-wa { background: rgba(37, 211, 102, 0.15); color: var(--wa); border: 1px solid rgba(37, 211, 102, 0.3); width: 35px; height: 35px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; text-decoration: none;}
+
+        /* --- NAVEGAÇÃO --- */
+        .bottom-bar { position: absolute; bottom: 0; left: 0; width: 100%; height: 95px; background: rgba(10,10,11,0.95); backdrop-filter: blur(15px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; padding-bottom: 25px; z-index: 100; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 5px; color: var(--text-muted); font-size: 0.7rem; font-weight: 500; cursor: pointer; }
+        .nav-item.active { color: var(--gold); }
+
+        /* --- MODAIS --- */
+        .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; display: none; opacity: 0; transition: 0.3s; }
+        .modal-overlay.active { display: block; opacity: 1; }
+        .modal-sheet { position: absolute; bottom: -100%; left: 0; width: 100%; background: var(--bg-app); border-radius: 24px 24px 0 0; padding: 25px 20px; transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1); max-height: 90vh; overflow-y: auto; border-top: 1px solid var(--border);}
+        .modal-overlay.active .modal-sheet { bottom: 0; }
+        
+        .custom-input { width: 100%; background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-title); padding: 16px; border-radius: var(--radius-md); font-size: 0.95rem; outline: none; margin-bottom: 15px;}
+        .custom-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; display: block;}
+        
+        .btn-submit { width: 100%; padding: 18px; border-radius: var(--radius-md); background: var(--gold); color: #000; border: none; font-size: 1rem; font-family: 'Outfit', sans-serif; font-weight: 800; cursor: pointer; margin-bottom: 10px; text-transform: uppercase;}
+        .btn-secondary { background: var(--bg-surface); color: white; border: 1px solid var(--border); }
+        .btn-zap { background: rgba(191, 90, 242, 0.15); color: var(--zap); border: 1px solid rgba(191, 90, 242, 0.3); }
+
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
+        .menu-card { background: var(--bg-surface); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius-md); text-align: center; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <div id="login-screen">
+        <div class="login-logo">🧑‍💻</div>
+        <h1 class="font-top" style="font-size: 1.5rem; color: white; margin-bottom: 30px;">Meu Sistema</h1>
+        
+        <div class="password-dots" id="dots-container"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="numpad">
+            <button class="numpad-btn" onclick="typePass(1)">1</button><button class="numpad-btn" onclick="typePass(2)">2</button><button class="numpad-btn" onclick="typePass(3)">3</button>
+            <button class="numpad-btn" onclick="typePass(4)">4</button><button class="numpad-btn" onclick="typePass(5)">5</button><button class="numpad-btn" onclick="typePass(6)">6</button>
+            <button class="numpad-btn" onclick="typePass(7)">7</button><button class="numpad-btn" onclick="typePass(8)">8</button><button class="numpad-btn" onclick="typePass(9)">9</button>
+            <div></div><button class="numpad-btn" onclick="typePass(0)">0</button><button class="numpad-btn" style="background:transparent; border:none; color:var(--danger);" onclick="clearPass()"><i class="ph-bold ph-backspace"></i></button>
+        </div>
+    </div>
+
+    <div id="app">
+        <header class="top-bar">
+            <div>
+                <h1 class="font-top" style="font-size: 1.2rem; color: var(--gold);">Meu Sistema 🧑‍💻</h1>
+                <p style="font-size: 0.75rem; color: var(--text-muted);" id="current-date-header"></p>
+            </div>
+            <div class="actions-header">
+                <div class="bell-btn" onclick="openModal('modal-cobranca')">
+                    <i class="ph-fill ph-bell"></i>
+                    <div class="bell-badge" id="bell-count" style="display: none;">0</div>
+                </div>
+                <div class="lock-btn" onclick="lockApp()"><i class="ph-bold ph-lock-key"></i></div>
+            </div>
+        </header>
+
+        <main class="content">
+            
+            <div id="view-dashboard" class="view active">
+                <h3 style="font-size: 1rem; color: white;">Monitor de Capital</h3>
+                <div class="capital-grid">
+                    <div class="capital-card card-total" style="cursor: pointer;" onclick="openEditTotal()">
+                        <p class="cap-title">Capital Total <i class="ph-bold ph-pencil-simple" style="margin-left: 3px; font-size: 0.8rem;"></i></p>
+                        <h2 class="font-top cap-value" style="color: var(--gold);" id="ind-total">R$ 0,00</h2>
+                    </div>
+                    <div class="capital-card card-caixa">
+                        <p class="cap-title">Saldo (Livres)</p><h2 class="font-top cap-value" id="ind-caixa">R$ 0,00</h2>
+                    </div>
+                    <div class="capital-card card-rua">
+                        <p class="cap-title">Capital na Rua</p><h2 class="font-top cap-value" id="ind-rua">R$ 0,00</h2>
+                    </div>
+                    <div class="capital-card card-lucro">
+                        <p class="cap-title">Lucro Líquido</p><h2 class="font-top cap-value" style="color: var(--zap);" id="ind-lucro">R$ 0,00</h2>
+                    </div>
+                </div>
+
+                <div style="background: rgba(255, 69, 58, 0.1); border: 1px solid rgba(255, 69, 58, 0.3); padding: 20px; border-radius: var(--radius-md); text-align: center; margin-top: 10px; cursor: pointer;" onclick="openModal('modal-cobranca')">
+                    <h3 style="color: var(--danger); font-size: 1.1rem; margin-bottom: 5px;"><i class="ph-fill ph-warning"></i> Central de Cobrança</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-base);">Você tem <strong id="dash-pendencias-text">0</strong> pendências urgentes hoje.</p>
+                </div>
+            </div>
+
+            <div id="view-clients" class="view">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="font-size: 1.3rem;">Clientes</h2>
+                    <button style="background: var(--gold); color: black; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold;" onclick="openModal('modal-cliente')">+ Novo</button>
+                </div>
+                <div id="list-clientes" style="margin-top: 10px;"></div>
+            </div>
+
+            <div id="view-loans" class="view">
+                <h2 style="font-size: 1.3rem;">Novo Contrato</h2>
+                <div style="background: var(--bg-surface); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border);">
+                    <select id="sim-cliente" class="custom-input"></select>
+                    <div class="capital-grid">
+                        <input type="number" id="sim-valor" class="custom-input" placeholder="Valor do Bolo (R$)">
+                        <input type="number" id="sim-taxa" class="custom-input" placeholder="Taxa Mensal (%)" value="10">
+                    </div>
+                    <div class="capital-grid">
+                        <input type="number" id="sim-qtd" class="custom-input" placeholder="Parcelas" value="1">
+                        <select id="sim-tipo" class="custom-input"><option value="simples">Juros Fixo</option></select>
+                    </div>
+                    <button class="btn-submit" onclick="simularEmprestimo()" style="margin-bottom: 0;">SIMULAR</button>
+                </div>
+                <div id="preview-box" style="display: none; background: var(--bg-elevated); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--gold);"></div>
+            </div>
+
+            <div id="view-installments" class="view">
+                <h2 style="font-size: 1.3rem;">Carteira & Giro</h2>
+                
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+                    <button class="btn-secondary" style="flex:1; padding: 10px; border-radius:8px; font-size: 0.85rem;" onclick="filterInstallments('todos')">Normais</button>
+                    <button class="btn-secondary" style="flex:1; padding: 10px; border-radius:8px; font-size: 0.85rem; color: var(--danger); border-color: var(--danger);" onclick="filterInstallments('atraso')">Atrasos</button>
+                    <button class="btn-secondary" style="flex:1; min-width: 100%; padding: 12px; border-radius:8px; font-size: 0.9rem; font-weight: bold; color: var(--info); border-color: var(--info); background: rgba(10, 132, 255, 0.1);" onclick="filterInstallments('giro')">
+                        <i class="ph-bold ph-arrows-clockwise"></i> Amortizar / Giro
+                    </button>
+                </div>
+
+                <div id="list-parcelas"></div>
+            </div>
+
+            <div id="view-menu" class="view">
+                <h2 style="font-size: 1.3rem;">Mais Opções</h2>
+                <div class="menu-grid">
+                    <div class="menu-card" onclick="openModal('modal-relatorio')">
+                        <i class="ph-fill ph-microsoft-excel" style="color: var(--success);"></i><p style="font-size: 0.9rem; font-weight: 600;">Exportar Excel</p>
+                    </div>
+                    <div class="menu-card" onclick="openModal('modal-add-capital')">
+                        <i class="ph-fill ph-money"></i><p style="font-size: 0.9rem; font-weight: 600;">Aportar Capital</p>
+                    </div>
+                    <div class="menu-card" onclick="openModal('modal-config')">
+                        <i class="ph-fill ph-shield-check"></i><p style="font-size: 0.9rem; font-weight: 600;">Segurança</p>
+                    </div>
+                    <div class="menu-card" onclick="clearData()">
+                        <i class="ph-fill ph-trash" style="color: var(--danger);"></i><p style="font-size: 0.9rem; font-weight: 600; color: var(--danger);">Zerar Dados</p>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <nav class="bottom-bar">
+            <div class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')"><i class="ph-fill ph-squares-four" style="font-size: 1.6rem;"></i> Início</div>
+            <div class="nav-item" data-tab="clients" onclick="switchTab('clients')"><i class="ph-fill ph-users" style="font-size: 1.6rem;"></i> Clientes</div>
+            <div class="nav-item" data-tab="loans" onclick="switchTab('loans')"><i class="ph-fill ph-hand-coins" style="font-size: 1.6rem;"></i> Emprestar</div>
+            <div class="nav-item" data-tab="installments" onclick="switchTab('installments')"><i class="ph-fill ph-list-checks" style="font-size: 1.6rem;"></i> Parcelas</div>
+            <div class="nav-item" data-tab="menu" onclick="switchTab('menu')"><i class="ph-bold ph-list" style="font-size: 1.6rem;"></i> Menu</div>
+        </nav>
+
+        <div class="modal-overlay" id="modal-edit-total">
+            <div class="modal-sheet">
+                <h2 style="margin-bottom: 20px;"><i class="ph-bold ph-pencil-simple" style="color: var(--gold);"></i> Editar Capital Total</h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Ao alterar seu Capital Total, o seu "Saldo Livres" (caixa) será reajustado automaticamente para a conta fechar.</p>
+                <input type="number" id="edit-total-val" class="custom-input" placeholder="Digite o novo valor total (R$)">
+                <button class="btn-submit" onclick="saveTotalCapital()">Salvar Capital</button>
+                <button class="btn-submit btn-secondary" onclick="closeModal('modal-edit-total')">Cancelar</button>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="modal-amortizar">
+            <div class="modal-sheet">
+                <h2 style="margin-bottom: 20px; color: var(--info);"><i class="ph-bold ph-arrows-clockwise"></i> Amortizar / Giro</h2>
+                <div style="background: var(--bg-surface); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--border);">
+                    <p style="color: var(--text-muted); font-size: 0.85rem;">Dívida Atual (Bolo):</p>
+                    <h3 class="font-top" id="amort-divida" style="color: white; margin-bottom: 15px;">R$ 0,00</h3>
+                    <div class="capital-grid" style="margin-bottom: 15px;">
+                        <div><label class="custom-label">Dias:</label><input type="number" id="amort-dias" class="custom-input" value="1" oninput="recalcAmort()"></div>
+                        <div><label class="custom-label">Juro Calculado:</label><input type="text" id="amort-juro-calc" class="custom-input" style="color: var(--danger);" readonly></div>
+                    </div>
+                    <label class="custom-label">Valor que o cliente está pagando:</label>
+                    <input type="number" id="amort-pago" class="custom-input" placeholder="R$ 0,00" oninput="recalcAmort()">
+                    <hr style="border:0; border-top: 1px dashed rgba(255,255,255,0.1); margin: 15px 0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;"><span style="color: var(--text-muted); font-size: 0.85rem;">Abatimento (Diminui do Bolo):</span><strong id="amort-abatimento" style="color: var(--success);">R$ 0,00</strong></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;"><span style="font-weight: 600;">Nova Dívida (Novo Bolo):</span><strong class="font-top" id="amort-nova-divida" style="font-size: 1.4rem; color: var(--gold);">R$ 0,00</strong></div>
+                </div>
+                <button class="btn-submit" style="background: var(--info); color: white;" onclick="confirmAmortizacao()">Confirmar Amortização</button>
+                <button class="btn-submit btn-secondary" onclick="closeModal('modal-amortizar')">Cancelar</button>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="modal-cobranca">
+            <div class="modal-sheet" style="height: 85vh; display: flex; flex-direction: column;">
+                <h2 style="margin-bottom: 20px; color: var(--danger);"><i class="ph-fill ph-warning"></i> Central de Cobrança</h2>
+                <div id="list-central-cobranca" style="flex: 1; overflow-y: auto;"></div>
+                <button class="btn-submit btn-secondary" style="margin-top: 15px;" onclick="closeModal('modal-cobranca')">Fechar Janela</button>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="modal-pagar">
+            <div class="modal-sheet">
+                <h2 style="margin-bottom: 20px;">Baixar Parcela</h2>
+                <div style="background: var(--bg-surface); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;"><span style="color: var(--text-muted); font-size: 0.85rem;">Valor Original:</span><strong id="pag-valor-orig" style="color: white;">R$ 0,00</strong></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center;" id="linha-multa">
+                        <span style="color: var(--danger); font-size: 0.85rem;">Multa por Atraso:</span>
+                        <input type="number" id="pag-multa" class="custom-input" style="width: 100px; padding: 5px; margin-bottom: 0; text-align: right; color: var(--danger);" oninput="recalcPagamento()">
+                    </div>
+                    <hr style="border:0; border-top: 1px dashed rgba(255,255,255,0.1); margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-weight: 600;">Total a Receber:</span><strong class="font-top" id="pag-total" style="font-size: 1.8rem; color: var(--gold);">R$ 0,00</strong></div>
+                </div>
+                <button class="btn-submit" style="background: var(--success); color: white;" onclick="confirmPayment()">Confirmar Recebimento</button>
+                <button class="btn-submit btn-secondary" onclick="closeModal('modal-pagar')">Cancelar</button>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="modal-relatorio"><div class="modal-sheet"><h2>Exportar Dados</h2><input type="date" id="rel-data" class="custom-input"><input type="month" id="rel-mes" class="custom-input"><button class="btn-submit" onclick="exportarRelatorio('dia')">Baixar Dia</button><button class="btn-submit" onclick="exportarRelatorio('mes')">Baixar Mês</button><button class="btn-submit btn-secondary" onclick="closeModal('modal-relatorio')">Cancelar</button></div></div>
+        <div class="modal-overlay" id="modal-cliente"><div class="modal-sheet"><h2>Cadastrar Cliente</h2><input type="text" id="cli-nome" class="custom-input" placeholder="Nome Completo"><input type="text" id="cli-tel" class="custom-input" placeholder="WhatsApp"><input type="number" id="cli-renda" class="custom-input" placeholder="Renda Mensal"><button class="btn-submit" onclick="saveClient()">Salvar</button><button class="btn-submit btn-secondary" onclick="closeModal('modal-cliente')">Cancelar</button></div></div>
+        <div class="modal-overlay" id="modal-add-capital"><div class="modal-sheet"><h2>Aportar Capital</h2><input type="number" id="add-cap-val" class="custom-input" placeholder="Valor (R$)"><button class="btn-submit" onclick="addCapital()">Aportar</button><button class="btn-submit btn-secondary" onclick="closeModal('modal-add-capital')">Cancelar</button></div></div>
+        <div class="modal-overlay" id="modal-config"><div class="modal-sheet"><h2>Segurança</h2><input type="password" id="conf-pin" class="custom-input" placeholder="PIN Master"><input type="number" id="conf-nova-senha" class="custom-input" placeholder="Nova Senha"><button class="btn-submit" onclick="changePassword()">Salvar</button><button class="btn-submit btn-secondary" onclick="closeModal('modal-config')">Cancelar</button></div></div>
+
+    </div>
+
+    <script>
+        let db = JSON.parse(localStorage.getItem('sgc_v6')) || { password: '4455', pin: '1234', saldoCaixa: 10000, lucroRealizado: 0, clients: [], loans: [] };
+        const saveDb = () => localStorage.setItem('sgc_v6', JSON.stringify(db));
+        
+        let globalCapitalRua = 0; 
+
+        const fmtM = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+        const fmtD = (iso) => iso.split('T')[0].split('-').reverse().join('/');
+        
+        const showToast = (msg, isError = false) => {
+            const container = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = 'toast'; 
+            t.innerHTML = `<i class="ph-fill ${isError ? 'ph-warning-circle' : 'ph-check-circle'}" style="color: ${isError ? 'var(--danger)' : 'var(--gold)'}; font-size: 1.2rem;"></i> ${msg}`;
+            container.appendChild(t); setTimeout(() => t.remove(), 3000);
+        };
+
+        // --- LOGIN ---
+        let typed = '';
+        function typePass(n) {
+            if(typed.length < 4) { typed += n; document.querySelectorAll('.dot').forEach((d, i) => i < typed.length ? d.classList.add('filled') : d.classList.remove('filled')); }
+            if(typed.length === 4) setTimeout(() => { if(typed === db.password) { document.getElementById('login-screen').style.display = 'none'; document.getElementById('app').style.display = 'flex'; initApp(); } else { typed=''; document.querySelectorAll('.dot').forEach(d=>d.classList.remove('filled')); showToast('Senha Incorreta', true); } }, 200);
+        }
+        function lockApp() { document.getElementById('app').style.display = 'none'; document.getElementById('login-screen').style.display = 'flex'; typed=''; document.querySelectorAll('.dot').forEach(d=>d.classList.remove('filled')); }
+
+        // --- INIT ---
+        function initApp() {
+            document.getElementById('current-date-header').innerText = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+            updateSystemStatus(); renderClients(); populateClientSelect(); filterInstallments('todos');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(`view-${tabId}`).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.querySelector(`.nav-item[data-tab="${tabId}"]`).classList.add('active');
+        }
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        function updateSystemStatus() {
+            globalCapitalRua = 0; 
+            let atrasosHtml = '', countPendencias = 0;
+            const hojeIso = new Date().toISOString().split('T')[0];
+
+            db.loans.forEach(loan => {
+                const cli = db.clients.find(c=>c.id==loan.cliId);
+                globalCapitalRua += loan.valor;
+                loan.parcelas.forEach(p => {
+                    if(!p.pago) {
+                        const diffTime = new Date(hojeIso) - new Date(p.venc);
+                        const diasAtraso = Math.floor(diffTime / 86400000);
+                        if(diasAtraso >= 0) {
+                            countPendencias++;
+                            atrasosHtml += `<div class="list-item"><div><p>${cli.nome}</p><p>${fmtM(p.valor)}</p></div></div>`;
+                        }
+                    }
+                });
+            });
+
+            document.getElementById('ind-caixa').innerText = fmtM(db.saldoCaixa);
+            document.getElementById('ind-rua').innerText = fmtM(globalCapitalRua);
+            document.getElementById('ind-total').innerText = fmtM(db.saldoCaixa + globalCapitalRua);
+            document.getElementById('ind-lucro').innerText = fmtM(db.lucroRealizado);
+            document.getElementById('dash-pendencias-text').innerText = countPendencias;
+        }
+
+        function saveTotalCapital() {
+            const novoTotal = parseFloat(document.getElementById('edit-total-val').value);
+            if (isNaN(novoTotal)) return;
+            db.saldoCaixa = novoTotal - globalCapitalRua;
+            saveDb(); closeModal('modal-edit-total'); updateSystemStatus(); showToast('Atualizado!');
+        }
+
+        function saveClient() {
+            db.clients.push({ id: Date.now(), nome: document.getElementById('cli-nome').value, tel: document.getElementById('cli-tel').value, renda: parseFloat(document.getElementById('cli-renda').value) });
+            saveDb(); closeModal('modal-cliente'); renderClients(); populateClientSelect();
+        }
+        function renderClients() {
+            document.getElementById('list-clientes').innerHTML = db.clients.map(c => `<div class="list-item"><p>${c.nome}</p></div>`).join('');
+        }
+        function populateClientSelect() { document.getElementById('sim-cliente').innerHTML = db.clients.map(c => `<option value="${c.id}">${c.nome}</option>`).join(''); }
+
+        function simularEmprestimo() {
+            const valor = parseFloat(document.getElementById('sim-valor').value);
+            if(valor > db.saldoCaixa) return showToast('Sem saldo', true);
+            document.getElementById('preview-box').style.display = 'block';
+            document.getElementById('preview-box').innerHTML = `<button class="btn-submit" onclick="aprovarEmprestimo()">APROVAR</button>`;
+        }
+
+        function filterInstallments(filter) {
+            document.getElementById('list-parcelas').innerHTML = '<p style="padding:20px; text-align:center;">Lista carregada.</p>';
+        }
+
+        function addCapital() { db.saldoCaixa += parseFloat(document.getElementById('add-cap-val').value); saveDb(); closeModal('modal-add-capital'); updateSystemStatus(); }
+        function clearData() { if(prompt('Senha:') === '1234') { localStorage.removeItem('sgc_v6'); location.reload(); } }
+    </script>
+</body>
+</html>
